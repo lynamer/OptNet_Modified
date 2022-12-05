@@ -9,7 +9,8 @@ import time
 
 def decode(X_):
     a = []
-    X = X_.numpy()
+    X = X_.cpu().numpy()
+    # X = X_.cpu().numpy()
     for i in range(len(X)):
         a.append(X[i])
     return a
@@ -42,11 +43,16 @@ def diff(eps=1e-3, verbose=0):
             d = h_.shape[1]
             #print(n, m, d)
             Q = decode(Q_)
-            p = p_.numpy()
-            G = G_.numpy()
-            h = h_.numpy()
-            A = A_.numpy()
-            b = b_.numpy()
+            # p = p_.numpy()
+            # G = G_.numpy()
+            # h = h_.numpy()
+            # A = A_.numpy()
+            # b = b_.numpy()
+            p = p_.cpu().numpy()
+            G = G_.cpu().numpy()
+            h = h_.cpu().numpy()
+            A = A_.cpu().numpy()
+            b = b_.cpu().numpy()
             # Define and solve the CVXPY problem.
             optimal = []
             gradient = []
@@ -95,16 +101,19 @@ def diff(eps=1e-3, verbose=0):
                 #print('iterations:', iters)
                 gradient.append(dxk)
 
-
-            ctx.save_for_backward(torch.tensor(np.array(gradient)))
-            return torch.tensor((np.array(optimal)))
+            if torch.cuda.is_available():
+                device = torch.device('cuda')
+            else: device = torch.device('cpu')
+            
+            ctx.save_for_backward(torch.tensor(np.array(gradient)).to(device))
+            return torch.tensor((np.array(optimal))).to(device)
 
         @staticmethod
         def backward(ctx, grad_output):
             # only call parameters q
             grad = ctx.saved_tensors
 
-            grad_all = torch.zeros((len(grad[0]),200))
+            grad_all = torch.zeros((len(grad[0]),200)).cuda()
             for i in range(len(grad[0])):
                 grad_all[i] = grad_output[i] @ grad[0][i]
             #print(grad_all.shape)

@@ -24,7 +24,7 @@ from torch.utils.data import DataLoader
 import os
 import sys
 import math
-
+import numpy as np
 import shutil
 
 import setproctitle
@@ -42,14 +42,14 @@ def get_loaders(args):
     kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
     if args.dataset == 'mnist':
         trainLoader = torch.utils.data.DataLoader(
-            dset.MNIST('data/mnist', train=True, download=True,
+            dset.MNIST('/storage/data/panbk/dataset/', train=True, download=True,
                            transform=transforms.Compose([
                                transforms.ToTensor(),
                                transforms.Normalize((0.1307,), (0.3081,))
                            ])),
             batch_size=args.batchSz, shuffle=True, **kwargs)
         testLoader = torch.utils.data.DataLoader(
-            dset.MNIST('data/mnist', train=False, transform=transforms.Compose([
+            dset.MNIST('/storage/data/panbk/dataset/', train=False, transform=transforms.Compose([
                 transforms.ToTensor(),
                 transforms.Normalize((0.1307,), (0.3081,))
             ])),
@@ -71,11 +71,11 @@ def get_loaders(args):
         ])
 
         trainLoader = DataLoader(
-            dset.CIFAR10(root='data/cifar', train=True, download=True,
+            dset.CIFAR10(root='/storage/data/panbk/dataset/', train=True, download=True,
                         transform=trainTransform),
             batch_size=args.batchSz, shuffle=True, **kwargs)
         testLoader = DataLoader(
-            dset.CIFAR10(root='data/cifar', train=False, download=True,
+            dset.CIFAR10(root='/storage/data/panbk/dataset/', train=False, download=True,
                         transform=testTransform),
             batch_size=args.batchSz, shuffle=False, **kwargs)
     else:
@@ -232,7 +232,7 @@ def main():
     testF.close()
 
 def train(args, epoch, net, trainLoader, optimizer, trainF):
-    seed = np random
+    seed = 1
     torch.manual_seed(seed)
     net.train()
     nProcessed = 0
@@ -242,9 +242,10 @@ def train(args, epoch, net, trainLoader, optimizer, trainF):
         begin = time.time()
         if args.cuda:
             data, target = data.cuda(), target.cuda()
+            
+        ## begins
         data, target = Variable(data), Variable(target)
         optimizer.zero_grad()
-
         output = net(data)
         loss = F.nll_loss(output, target)
         # make_graph.save('/tmp/t.dot', loss.creator); assert(False)
@@ -259,6 +260,8 @@ def train(args, epoch, net, trainLoader, optimizer, trainF):
             partialEpoch, nProcessed, nTrain, 100. * batch_idx / len(trainLoader),
             loss.item(), err))
         end = time.time()
+        
+        ## ends, which means no need to modify the codes
         trainF.write('{},{},{},{}\n'.format(partialEpoch, loss.item(), err, end-begin))
         trainF.flush()
 
