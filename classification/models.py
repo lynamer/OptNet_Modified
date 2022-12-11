@@ -178,7 +178,7 @@ class OptNet(nn.Module):
             Q.double(), inputs.double(), G.double(), h.double(), e, e)
         x = x.float()
         # x = x[:,:10].float()
-
+        # so this is fully an optimation problem solver.
         return F.log_softmax(x)
 
 class CNN(nn.Module):
@@ -274,7 +274,56 @@ class Ours(nn.Module):
         # FC-ReLU-QP-FC-Softmax
         x = x.view(nBatch, -1)
 
+        # torch.nn.functional 
         x = F.relu(self.fc1(x))
+        
+        ## 
+
+        Q = self.Q.unsqueeze(0).expand(nBatch, self.Q.size(0), self.Q.size(1)).double()
+        #p = -x.view(nBatch,-1)
+        G = self.G.unsqueeze(0).expand(nBatch, self.G.size(0), self.G.size(1)).double()
+        h = self.h.unsqueeze(0).expand(nBatch, self.h.size(0)).double()
+        A = self.A.unsqueeze(0).expand(nBatch, self.A.size(0), self.A.size(1)).double()
+        b = self.b.unsqueeze(0).expand(nBatch, self.b.size(0)).double()
+
+        x = diff(verbose=False)(Q, x.double(), G, h, A, b).float()
+
+        x = self.fc2(x)
+
+        return F.log_softmax(x)
+    
+class MIPSolver(nn.Module):
+    def __init__(self, nFeatures, nHidden, nCls, neq, nineq, Qpenalty=0.1, eps=1e-4):
+        super().__init__()
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.nFeatures = nFeatures
+        self.nHidden = nHidden
+        self.nCls = nCls
+
+        self.fc1 = nn.Linear(nFeatures, nHidden)
+        self.fc2 = nn.Linear(nHidden, nCls)
+
+        self.Q = Qpenalty*torch.eye(nHidden).double().to(device)
+        # self.G = -torch.eye(nHidden).double().to(device)
+        # self.h = torch.zeros(nHidden).double().to(device)
+        self.G = torch.rand(nineq, nHidden).double().to(device)
+        self.h = torch.rand(self.G  .size(0)).double().to(device)
+        self.A = torch.rand(neq,nHidden).double().to(device)
+        self.b = torch.ones(self.A.size(0)).double().to(device)
+
+        self.neq = neq
+        self.nineq = nineq
+
+    def forward(self, x):
+        nBatch = x.size(0)
+
+        # FC-ReLU-QP-FC-Softmax
+        x = x.view(nBatch, -1)
+
+        # torch.nn.functional 
+        x = F.relu(self.fc1(x))
+        
+        ## 
 
         Q = self.Q.unsqueeze(0).expand(nBatch, self.Q.size(0), self.Q.size(1)).double()
         #p = -x.view(nBatch,-1)

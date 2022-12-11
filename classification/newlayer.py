@@ -56,6 +56,10 @@ def diff(eps=1e-3, verbose=0):
             # Define and solve the CVXPY problem.
             optimal = []
             gradient = []
+            
+            # print('A: ', A)
+            # print('A_: ', A_)
+            
 
             for i in range(len(Q)):
                 begin = time.time()
@@ -117,6 +121,9 @@ def diff(eps=1e-3, verbose=0):
             for i in range(len(grad[0])):
                 grad_all[i] = grad_output[i] @ grad[0][i]
             #print(grad_all.shape)
+            
+            
+            # ??? need to check the primal problem, whether those Q, x, G, h, A, b should also be updated.
             return (None, grad_all, None, None, None, None)
 
     return Newlayer.apply
