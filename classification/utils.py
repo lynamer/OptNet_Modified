@@ -108,31 +108,38 @@ class GraphData(torch_geometric.data.Data):
     obj is the scalar target label for objective value
     """
 
-    def __init__(self, file_name, var_nodes, cons_nodes, edge_index, edge_attr, y, obj, y_mask):
+    # def __init__(self, file_name, var_nodes, cons_nodes, edge_index, edge_attr, y, obj, y_mask):
+    #     super().__init__()
+    #     self.file_name = file_name
+    #     # tensor
+    #     self.var_nodes = var_nodes
+    #     self.cons_nodes = cons_nodes
+    #     self.edge_attr = edge_attr
+    #     self.edge_index = edge_index
+    #     self.y = y 
+    #     self.obj = obj
+    #     if y_mask:
+    #         self.y_binary_mask = y_mask[0]
+    #         self.y_continuous_mask = y_mask[1] 
+
+    #     # self.y[self.y_binary_mask]        label for binary variables
+    #     # self.y[self.y_continuous_mask]    label for continuous variables
+
+    # def info(self):
+    #     print("num_var {}, num_cons {}, edge size {}, y size {}, num_binary {}, obj {}".format(
+    #         self.var_nodes.size(0), self.cons_nodes.size(0), list(self.edge_index), list(self.y.size(), len(self.y_binary_mask), self.obj)
+    #     ))
+
+    def __init__(self, var_nodes, cons_nodes, edge_index, edge_attr, y, obj):
         super().__init__()
-        self.file_name = file_name
         # tensor
         self.var_nodes = var_nodes
         self.cons_nodes = cons_nodes
         self.edge_attr = edge_attr
         self.edge_index = edge_index
-        self.y = y 
+        self.y = y
         self.obj = obj
-        # list
-        # print(obj)
-        # print("====================", type(y_mask))
-        # print(y_mask)
-        if y_mask:
-            self.y_binary_mask = y_mask[0]
-            self.y_continuous_mask = y_mask[1] 
 
-        # self.y[self.y_binary_mask]        label for binary variables
-        # self.y[self.y_continuous_mask]    label for continuous variables
-
-    def info(self):
-        print("num_var {}, num_cons {}, edge size {}, y size {}, num_binary {}, obj {}".format(
-            self.var_nodes.size(0), self.cons_nodes.size(0), list(self.edge_index), list(self.y.size(), len(self.y_binary_mask), self.obj)
-        ))
 
 
 
