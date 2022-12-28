@@ -35,7 +35,7 @@ import torch_geometric
 from qpth.qp import QPFunction
 
 class MIPSolver(nn.Module):
-    def __init__(self, data, mu = 1e-3, L=2):
+    def __init__(self, data, mu = 1e-3, L=2, lam = 50):
         super().__init__()
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         n = data.var_nodes.size(0)
@@ -139,9 +139,10 @@ class MIPSolver(nn.Module):
         self.bin = bin                      # whether binary list
         self.device = device                # device = cuda
         self.n = n                          # n_variables
+        self.lam = lam
 
 
-    def forward(self, y_0, lam = 50):
+    def forward(self, y_0):
         nBatch = 1
         # Here batch is not for any use, just to meet with newlayer's code.
         Q = self.Q.unsqueeze(0).expand(nBatch, self.Q.size(0), self.Q.size(1)).double()
@@ -158,7 +159,7 @@ class MIPSolver(nn.Module):
         for i in range(len(y_0)):
             temp = self.c[i] 
             if self.bin[i]:                                         # is binary variable
-                temp = temp + lam * (1 - self.L * math.pow(y_0[i], self.L)) # add DC constraints, p = c + 1 - L (z_i)^L     else p = c
+                temp = temp + self.lam * (1 - self.L * math.pow(y_0[i], self.L)) # add DC constraints, p = c + 1 - L (z_i)^L     else p = c
             p.append(temp)
             
         p = torch.tensor(p).to(torch.float32)
@@ -179,7 +180,9 @@ class MIPSolver(nn.Module):
 
 
 def solve_MIP(data):
-    mu = 1000
+    mu = 1e-3
+    L = 2
+    lam = 50
     opt_prob = MIPSolver(data, mu=mu)
     y_0 = data.y
     return opt_prob(y_0)
