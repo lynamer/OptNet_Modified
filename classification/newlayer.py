@@ -80,9 +80,10 @@ def diff(eps=1e-3, verbose=0):
                 rho = 1
                 R = - np.linalg.inv(Qi + rho * Ai.T @ Ai + rho * Gi.T @ Gi)
                 iters = 0
-
+                
                 #for _ in range(iters):
                 while abs((res[-1] - res[-2]) / res[-2]) > eps:
+                    
                     iters += 1
                     xk = R @ (pi + Ai.T @ lamb + Gi.T @ nu - rho * Ai.T @ bi + rho * Gi.T @ (sk - hi))
                     dxk = R @ (np.eye(n) + Ai.T @ dlamb + Gi.T @ dnu + rho * Gi.T @ dsk)
@@ -99,7 +100,8 @@ def diff(eps=1e-3, verbose=0):
                     dnu = dnu + rho * (Gi @ dxk + dsk)
                     #dx_norm.append(np.sum(dxk))
                     res.append(0.5 * (xk.T @ Qi @ xk) + pi.T @ xk)
-
+                    if (res[-2] == 0):
+                        break
                 end = time.time()
                 optimal.append(xk)
                 #print('iterations:', iters)
