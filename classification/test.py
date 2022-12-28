@@ -180,10 +180,10 @@ class MIPSolver(nn.Module):
 
 
 def solve_MIP(data):
-    mu = 1e-3
+    mu = 1000
     L = 2
     lam = 50
-    opt_prob = MIPSolver(data, mu=mu)
+    opt_prob = MIPSolver(data, mu=mu, lam=lam)
     y_0 = data.y
     return opt_prob(y_0)
     
