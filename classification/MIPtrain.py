@@ -21,6 +21,7 @@ from torch.utils.data import DataLoader
 
 import os
 import sys
+import copy
 import math
 import numpy as np
 import shutil
@@ -39,6 +40,7 @@ class MIPSolver(nn.Module):
         super().__init__()
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         n = data.var_nodes.size(0)
+        print(f"mu: {mu}")
         # print('n: ', n)
         Q = torch.eye(n)
         # Q = torch.zeros([n, n])
@@ -154,7 +156,8 @@ class MIPSolver(nn.Module):
         A = A.unsqueeze(0).expand(nBatch, self.A.size(0), self.A.size(1)).double()
         
         b = self.b.unsqueeze(0).expand(nBatch, self.b.size(0)).double()
-        
+        print(f"lambda: {self.lam}")
+        print(f"L: {self.L}")
         p = []
         for i in range(len(y_0)):
             temp = self.c[i] 
@@ -173,18 +176,23 @@ class MIPSolver(nn.Module):
         print(f"b.size: {b.size()}")
         # x = diff(verbose=False)(Q, p, G, h, A, b).float()
         
+        # for i in range(len(x)):
+            
+        #     if self.bin[i]: 
+        #         result[i] = round(result[i])# is binary variable
+                
         x = QPFunction(verbose=True)(Q, p, G, h, A, b).float()
         # print( G @ x.T - h)
         # print( A @ x.T - b)
-
-        return x
+        result = copy.deepcopy(x)
+        return result
     
 
 
 def solve_MIP(data):
     mu = 1e-3
     L = 2
-    lam = 50
+    lam = 5
     opt_prob = MIPSolver(data, mu=mu, lam=lam)
     result = opt_prob(data.y)
     
@@ -207,7 +215,12 @@ if __name__=='__main__':
     # data = torch.load(os.path.join("instances", "10r5c_eq_2.pt"))
     # data = torch.load(os.path.join("instances", "10r5c_eq_3.pt"))
     # data = torch.load(os.path.join("instances", "10r5c_eq_4.pt"))
-    data = torch.load(os.path.join("instances", "10r5c_neq.pt"))
+    # instance_path = os.path.join("instances","tiny_10r_5c_0.55d", "instance_2.pt")
+    # instance_path = os.path.join("instances","10r5c_neq.pt")
+    # instance_path = os.path.join("instances","instance_1.pt")
+    instance_path = os.path.join("instances","tiny_1000r_500c_0.05d", "instance_3.pt")
+    data = torch.load(instance_path)
+    print(f"runing instance :{instance_path}")
     x = solve_MIP(data)
     # print(x)
     # print(x.size())
@@ -218,6 +231,6 @@ if __name__=='__main__':
     for i in range(len(data.var_nodes)):
         res = data.var_nodes[i][1] * x[0][i]
         sum = sum + res
-    print(sum)
-    print(data.obj)
+    print(f"final objective: {sum}")
+    print(f"expected objective: {data.obj}")
     # test_diff()
