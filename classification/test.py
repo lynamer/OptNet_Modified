@@ -159,7 +159,7 @@ class MIPSolver(nn.Module):
         for i in range(len(y_0)):
             temp = self.c[i] 
             if self.bin[i]:                                         # is binary variable
-                temp = temp + self.lam * (1 - self.L * math.pow(y_0[i], self.L)) # add DC constraints, p = c + 1 - L (z_i)^L     else p = c
+                temp = temp + self.lam * (1 - self.L * math.pow(y_0[i], self.L-1)) # add DC constraints, p = c + 1 - L (z_i)^L     else p = c
             p.append(temp)
             
         p = torch.tensor(p).to(torch.float32)
@@ -171,21 +171,24 @@ class MIPSolver(nn.Module):
         print(f"h.size: {h.size()}")
         print(f"A.size: {A.size()}")
         print(f"b.size: {b.size()}")
-        x = diff(verbose=False)(Q, p, G, h, A, b).float()
+        # x = diff(verbose=False)(Q, p, G, h, A, b).float()
         
-        # x = QPFunction(verbose=True)(Q, p, G, h, A, b).float()
+        x = QPFunction(verbose=True)(Q, p, G, h, A, b).float()
+        # print( G @ x.T - h)
+        # print( A @ x.T - b)
 
         return x
     
 
 
 def solve_MIP(data):
-    mu = 1000
+    mu = 1e-3
     L = 2
     lam = 50
     opt_prob = MIPSolver(data, mu=mu, lam=lam)
-    y_0 = data.y
-    return opt_prob(y_0)
+    result = opt_prob(data.y)
+    
+    return result
     
 # def test_diff():
 #     n = 10
@@ -200,7 +203,11 @@ def solve_MIP(data):
 #     print(f"test_diff: x={x}")
     
 if __name__=='__main__':
-    data = torch.load('instance_1.pt')
+    # data = torch.load(os.path.join("instances", "10r5c_eq_1.pt"))
+    # data = torch.load(os.path.join("instances", "10r5c_eq_2.pt"))
+    # data = torch.load(os.path.join("instances", "10r5c_eq_3.pt"))
+    # data = torch.load(os.path.join("instances", "10r5c_eq_4.pt"))
+    data = torch.load(os.path.join("instances", "10r5c_neq.pt"))
     x = solve_MIP(data)
     # print(x)
     # print(x.size())
