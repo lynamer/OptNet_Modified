@@ -36,7 +36,7 @@ import torch_geometric
 from qpth.qp import QPFunction
 
 class MIPSolver(nn.Module):
-    def __init__(self, data, mu = 1e-3, L=2, lam = 50):
+    def __init__(self, data, mu = 1e-3, L=2, lam = 50, primal_problem = 'lp', trust_region = 0):
         super().__init__()
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         n = data.var_nodes.size(0)
@@ -89,6 +89,7 @@ class MIPSolver(nn.Module):
             else:
                 neq_cons_idx.append([cons_index_map[con_idx], var_idx]) # constaint index
                 neq_cons_val.append(data.edge_attr[i]) # corresponding A
+                
         # there is no equality constaints in the problem. For the sake of 0.
         if not eq_cons_list:
             self.no_eq_cons_flag = True
@@ -134,9 +135,18 @@ class MIPSolver(nn.Module):
         if self.no_eq_cons_flag:
             bin.append(0)
             c.append(0)
-        Q = torch.eye(n)
-        # Q = torch.zeros([n, n])
-        Q = Q * mu
+            
+        if primal_problem == 'qp':
+            # here we should remind that in the case where no eq constraints, n = n + 1, and here need some more modification.
+            Q = torch.eye(n)
+            # Q = torch.zeros([n, n])
+            Q = Q * mu
+        else:
+            Q = torch.eye(n)
+            Q = Q * mu
+            
+        Q = Q + trust_region *  torch.eye(n) # add trust_region to origin problem.
+        
         self.Q = Q.to(device)
         self.G = G.to(device)
         self.h = h.to(device)
@@ -148,7 +158,10 @@ class MIPSolver(nn.Module):
         self.device = device                # device = cuda
         self.n = n                          # n_variables
         self.lam = lam
+        self.trust_region = trust_region
 
+    def update_parameter(self, lam):
+        self.lam = lam
 
     def forward(self, y_0):
         nBatch = 1
@@ -168,8 +181,9 @@ class MIPSolver(nn.Module):
         p = []
         for i in range(len(y_0)):
             temp = self.c[i] 
-            if self.bin[i]:                                         # is binary variable
-                temp = temp + self.lam * (1 - self.L * math.pow(y_0[i], self.L-1)) # add DC constraints, p = c + 1 - L (z_i)^L     else p = c
+            if self.bin[i]:                                                             # is binary variable
+                temp = temp + self.lam * (1 - self.L * math.pow(y_0[i], self.L-1))      # add DC constraints, p = c + lam * （ 1 - L (z_i)^L）    else p = c
+            temp = temp - 2 * self.trust_region * y_0[i]                                # add trust_region constraints: x^Tx - 2x^T y_0 + constant
             p.append(temp)
         if self.no_eq_cons_flag:
             p.append(0)
@@ -201,8 +215,10 @@ class MIPSolver(nn.Module):
 def solve_MIP(data):
     mu = 1e-3
     L = 2
-    lam = 5
-    opt_prob = MIPSolver(data, mu=mu, lam=lam)
+    lam = 1
+    primal_problem = 'lp'
+    trust_region = 1
+    opt_prob = MIPSolver(data, mu=mu, lam=lam, primal_problem = primal_problem, trust_region = trust_region)
     return opt_prob(data.y)
     
 # def test_diff():
@@ -218,15 +234,11 @@ def solve_MIP(data):
 #     print(f"test_diff: x={x}")
     
 if __name__=='__main__':
-    # data = torch.load(os.path.join("instances", "10r5c_eq_1.pt"))
-    # data = torch.load(os.path.join("instances", "10r5c_eq_2.pt"))
-    # data = torch.load(os.path.join("instances", "10r5c_eq_3.pt"))
-    # data = torch.load(os.path.join("instances", "10r5c_eq_4.pt"))
     # instance_path = os.path.join("instances","tiny_10r_5c_0.55d", "instance_2.pt")
-    instance_path = os.path.join("instances","tiny_1000r_500c_0.05d", "instance_3.pt")
+    # instance_path = os.path.join("instances","tiny_1000r_500c_0.05d", "instance_3.pt")
     # instance_path = os.path.join("instances","10r5c_neq.pt")
     # instance_path = os.path.join("instances","instance_1.pt")
-    # instance_path = os.path.join("instances", "10r5c_eq_4.pt")
+    instance_path = os.path.join("instances", "10r5c_eq_4.pt")
     data = torch.load(instance_path)
     print(f"runing instance :{instance_path}")
     x = solve_MIP(data)
